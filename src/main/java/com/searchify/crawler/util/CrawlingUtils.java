@@ -57,6 +57,7 @@ public class CrawlingUtils {
 		try {
 			Document doc = Jsoup.connect(url).get();
 			 Elements metaTags = doc.getElementsByTag("meta");
+			 
 		        
 		        String keywords = null;
 		        String description =null;
@@ -73,16 +74,16 @@ public class CrawlingUtils {
 			        	  if("description".equals(name)) {
 			        		  description = content;
 				          }
-			        	  if("title".equals(name)) {
-			        		  title = content;
-					      }
+//			        	  if("title".equals(name)) {
+//			        		  title = content;
+//					      }
 			        	 
 			        	}
 			    
 				    current.put("url", url);
 				    current.put("keywords",  keywords);
 				    current.put("description", description);
-				    current.put("title", title);
+				    current.put("title", doc.title());
 		        }
 		        
 		        
