@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -55,7 +56,18 @@ public class CrawlingUtils {
 			return;
 
 		try {
-			Document doc = Jsoup.connect(url).get();
+			Response response = Jsoup.connect(url).timeout(5000).ignoreHttpErrors(true).followRedirects(true).execute();
+			Document doc = null;
+
+			if (response.hasHeader("location")) {
+				String redirectUrl = response.header("location");
+				redirectUrl = redirectUrl.contains("http")?redirectUrl: url + redirectUrl;
+				doc = Jsoup.connect(redirectUrl).get();
+			}
+			else {
+				doc = Jsoup.connect(url).get();
+			}
+					
 			 Elements metaTags = doc.getElementsByTag("meta");
 			 
 		        
