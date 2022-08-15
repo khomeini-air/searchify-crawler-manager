@@ -1,8 +1,10 @@
 package com.searchify.crawler.util;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -16,6 +18,7 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.searchify.crawler.entity.WebPage;
 import com.searchify.crawler.response.CrawlResponse;
 
 /** 
@@ -32,7 +35,8 @@ public class CrawlingUtils {
             + "|png|mp3|mp4|zip|gz|pdf|xls|xlsx|doc|docx))$");
 	
 	Map<String, String> current = new HashMap<String, String>();
-	Set<String> internalLinks = new TreeSet<>();
+	List<WebPage> internalLinks = new ArrayList<WebPage>();
+	Set<String> interLinks = new TreeSet<>();
 	Set<String> externalLinks = new TreeSet<>();
 	Set<String> staticResources = new TreeSet<>();
 	Set<String> otherResources = new TreeSet<>();
@@ -50,7 +54,6 @@ public class CrawlingUtils {
 	 * @param urls
 	 */
 	public void getLinks(String crawlingUrl, String url, Set<String> urls) {
-		
 		//checks if the same url is already visited
 		if(!urls.add(url))
 			return;
@@ -116,7 +119,7 @@ public class CrawlingUtils {
 				
 				//checks if the url is external or internal
 				if(nextUrl.startsWith(crawlingUrl)){
-					internalLinks.add(nextUrl);
+					interLinks.add(nextUrl);
 //					getLinks(crawlingUrl, nextUrl, urls);
 				}
 				else
@@ -146,11 +149,63 @@ public class CrawlingUtils {
 
 	public CrawlResponse crawlResource(String link) {
 		current = new HashMap<String, String>();
-		internalLinks = new TreeSet<>();
+		internalLinks = new ArrayList<WebPage>();
 		externalLinks = new TreeSet<>();
+		interLinks = new TreeSet<>();
 		staticResources = new TreeSet<>();
 		otherResources = new TreeSet<>();
 		getLinks(link, link, new HashSet<>());
+		
+		for(String item : interLinks) {
+			internalLinks.add(simpleCrawling(item));
+		}
+		
 		return new CrawlResponse(LoggerMessages.CRAWL_SUCCESS, current, internalLinks, externalLinks, staticResources, otherResources);
 	}
+	
+	private WebPage simpleCrawling(String url) {
+        String keywords = null;
+        String description =null;
+        String title = null;
+		try {
+			Response response = Jsoup.connect(url).timeout(5000).ignoreHttpErrors(true).followRedirects(true).execute();
+			Document doc = null;
+	
+			if (response.hasHeader("location")) {
+				String redirectUrl = response.header("location");
+				redirectUrl = redirectUrl.contains("http")?redirectUrl: url + redirectUrl;
+				doc = Jsoup.connect(redirectUrl).get();
+			}
+			else {
+				doc = Jsoup.connect(url).get();
+			}
+			
+			title =  doc.title();
+					
+			 Elements metaTags = doc.getElementsByTag("meta");
+			 
+		        
+		        for (Element metaTag : metaTags) {
+			        String content = metaTag.attr("content");
+			        String name = metaTag.attr("name");
+			        if("keywords".equals(name)) {
+			        	keywords = content;
+			        }
+			        if("description".equals(name)) {
+			        	description = content;
+				    }
+			        	 
+			      }	
+		}
+		        catch (IOException e) {
+					e.printStackTrace();
+				}
+				finally {
+					System.out.println("Empty url" + url);
+					
+				}
+		return new WebPage(url, title, keywords, description);
+	}
+	
+	
 }
